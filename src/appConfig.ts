@@ -57,6 +57,8 @@ export type AppConfig = {
   showModsButton?: boolean
   defaultUsername?: string
   skinTexturesProxy?: string
+  /** PlaceSchema: https origins a server's portal (`openplace:open_uri`) may move this tab to. Empty = never. */
+  placeschemaPortalOrigins?: string[]
   alwaysReconnectButton?: boolean
   reportBugButtonWithReconnect?: boolean
   disabledCommands?: string[] // Array of command IDs to disable (e.g. ['movement.jump', 'general.chat'])

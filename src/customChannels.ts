@@ -7,7 +7,8 @@ import { registerIdeChannels } from './core/ideChannels'
 import { registerIframeChannels } from './core/iframeChannels'
 import { serverSafeSettings } from './defaultOptions'
 import { lastConnectOptions } from './appStatus'
-import { gameAdditionalState } from './globalState'
+import { gameAdditionalState, miscUiState } from './globalState'
+import { placeschemaPortalTarget } from './placeschemaPortal'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -37,6 +38,7 @@ export default () => {
       registerServerSettingsChannel()
       registerTypingIndicatorChannel()
       registerVoiceChatChannel()
+      registerPlaceSchemaPortalChannel()
     })
   })
 }
@@ -53,6 +55,27 @@ const registerChannel = (channelName: string, packetStructure: any[], handler: (
   })
 
   console.debug(`registered custom channel ${channelName} channel`)
+}
+
+/**
+ * PlaceSchema portals (PLACE-1012): the server's `openplace:open_uri` carries the ticket URL when the
+ * player walks through its exit portal. Like the Fabric client mod, answer `openplace:opened` and go there,
+ * but in this same tab, and only to an https origin listed in config.json `placeschemaPortalOrigins`.
+ * Anything else is ignored, and the player keeps the chat link.
+ */
+const registerPlaceSchemaPortalChannel = () => {
+  const OPEN_URI = 'openplace:open_uri'
+  const OPENED = 'openplace:opened'
+  bot._client.registerChannel(OPENED, ['container', []], true)
+  registerChannel(OPEN_URI, ['container', [{ name: 'url', type: 'string' }]], (data) => {
+    const target = placeschemaPortalTarget(data.url, miscUiState.appConfig?.placeschemaPortalOrigins)
+    if (!target) {
+      console.warn('[placeschema] portal URL refused (not an allowlisted https origin)')
+      return
+    }
+    bot._client.writeChannel(OPENED, {})
+    window.location.href = target
+  }, false)
 }
 
 const registerConnectMetadataChannel = () => {
