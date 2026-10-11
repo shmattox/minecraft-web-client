@@ -9,6 +9,7 @@ import { serverSafeSettings } from './defaultOptions'
 import { lastConnectOptions } from './appStatus'
 import { gameAdditionalState, miscUiState } from './globalState'
 import { placeschemaPortalTarget } from './placeschemaPortal'
+import { installLooks, MAX_BYTES, MAX_VERTS, onLook, pinOrigin, resetLooks } from './placeschemaLooks'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -39,6 +40,7 @@ export default () => {
       registerTypingIndicatorChannel()
       registerVoiceChatChannel()
       registerPlaceSchemaPortalChannel()
+      registerPlaceSchemaLookChannels()
     })
   })
 }
@@ -76,6 +78,24 @@ const registerPlaceSchemaPortalChannel = () => {
     bot._client.writeChannel(OPENED, {})
     window.location.href = target
   }, false)
+}
+
+/**
+ * PlaceSchema carried-item looks (PLACE-1013): announce mesh support with `openplace:caps` (the mod's probe
+ * format), pin the server's sidecar origin from `openplace:origin`, and load each `openplace:look`.
+ */
+const registerPlaceSchemaLookChannels = () => {
+  resetLooks()
+  installLooks()
+  const str = { type: 'string' }
+  registerChannel('openplace:origin', ['container', [{ name: 'origin', ...str }]], (data) => pinOrigin(data.origin), false)
+  registerChannel('openplace:look', ['container', [{ name: 'grant', ...str }, { name: 'url', ...str }, { name: 'sha', ...str }]],
+    (data) => { void onLook(data.grant, data.url, data.sha) }, false)
+  const CAPS = 'openplace:caps'
+  bot._client.registerChannel(CAPS, ['container', [
+    { name: 'protocol', type: 'varint' }, { name: 'mesh', type: 'bool' }, { name: 'maxBytes', type: 'varint' }, { name: 'maxVerts', type: 'varint' }
+  ]], true)
+  bot._client.writeChannel(CAPS, { protocol: 1, mesh: true, maxBytes: MAX_BYTES, maxVerts: MAX_VERTS })
 }
 
 const registerConnectMetadataChannel = () => {
