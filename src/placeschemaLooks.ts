@@ -58,8 +58,25 @@ export const resetLooks = () => {
 
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
 
-/** Centre the model and fit its longest side to one block, the mod's fit. */
+/** A vanilla item sprite is a 1x1 square drawn corner to corner; a sword's blade spans about this much of it. */
+const VANILLA_ITEM_LENGTH = 1.35
+
+/**
+ * Fit the model where the renderer expects a vanilla item: centred, its longest side as long as a vanilla
+ * sword, and a +Y-up item (our grip convention: blade up, grip at the origin) tipped 45 degrees so it runs
+ * from bottom-left to top-right like the sprite it replaces. Materials become unlit (MeshBasicMaterial with
+ * the same colour and texture): the world has no environment map, so metallic PBR materials render black.
+ */
 const normalize = (scene: THREE.Object3D): THREE.Object3D => {
+  scene.traverse(o => {
+    const mesh = o as THREE.Mesh
+    if (!mesh.isMesh) return
+    const unlit = (m: THREE.Material) => {
+      const s = m as THREE.MeshStandardMaterial
+      return new THREE.MeshBasicMaterial({ color: s.color, map: s.map ?? null, transparent: s.transparent, opacity: s.opacity, alphaTest: s.alphaTest, side: s.side })
+    }
+    mesh.material = Array.isArray(mesh.material) ? mesh.material.map(unlit) : unlit(mesh.material)
+  })
   const box = new THREE.Box3().setFromObject(scene)
   const size = box.getSize(new THREE.Vector3())
   const longest = Math.max(size.x, size.y, size.z)
@@ -67,7 +84,8 @@ const normalize = (scene: THREE.Object3D): THREE.Object3D => {
   const fit = new THREE.Group()
   scene.position.sub(centre)
   fit.add(scene)
-  if (longest > 0) fit.scale.setScalar(1 / longest)
+  if (longest > 0) fit.scale.setScalar(VANILLA_ITEM_LENGTH / longest)
+  if (size.y === longest) fit.rotation.z = -Math.PI / 4
   return fit
 }
 
