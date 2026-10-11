@@ -163,7 +163,7 @@ importers:
         version: 0.1.47(@xmcl/text-component@2.1.3)(mc-assets@0.2.72)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       minecraft-protocol:
         specifier: github:PrismarineJS/node-minecraft-protocol#master
-        version: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
+        version: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
       minecraft-renderer:
         specifier: ^0.1.99
         version: 0.1.99(patch_hash=fa94db539d6e9092e11854072ccda6ba366d809794de378d99cd386be6f238d2)(@types/react@18.3.18)(contro-max@0.1.12(typescript@5.5.4))(mc-assets@0.2.72)(minecraft-data@3.105.0)(react@18.3.1)(three@0.184.0)
@@ -6210,9 +6210,9 @@ packages:
       mc-assets:
         optional: true
 
-  minecraft-protocol@https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce:
-    resolution: {tarball: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce}
-    version: 1.68.0
+  minecraft-protocol@https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270:
+    resolution: {tarball: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270}
+    version: 1.66.2
     engines: {node: '>=22'}
 
   minecraft-renderer@0.1.99:
@@ -12271,7 +12271,7 @@ snapshots:
       long: 5.3.1
       mc-bridge: 0.1.3(minecraft-data@3.105.0)
       minecraft-data: 3.105.0
-      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
+      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
       mkdirp: 2.1.6
       node-gzip: 1.1.2
       node-rsa: 1.1.1
@@ -12308,7 +12308,7 @@ snapshots:
       flatmap: 0.0.3
       long: 5.3.1
       minecraft-data: 3.105.0
-      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
+      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
       mkdirp: 2.1.6
       node-gzip: 1.1.2
       node-rsa: 1.1.1
@@ -15579,7 +15579,7 @@ snapshots:
     dependencies:
       '@zardoy/flying-squid': 0.0.49(encoding@0.1.13)
       exit-hook: 2.2.1
-      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
+      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
       mineflayer: https://codeload.github.com/zardoy/mineflayer/tar.gz/87dbfa28e39f43aa60bd2f2d7d1c2d22a3e73ef7(encoding@0.1.13)
       prismarine-item: 1.18.0
       ws: 8.18.1
@@ -15872,7 +15872,7 @@ snapshots:
     optionalDependencies:
       mc-assets: 0.2.72
 
-  minecraft-protocol@https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13):
+  minecraft-protocol@https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13):
     dependencies:
       '@types/node-rsa': 1.1.4
       '@types/readable-stream': 4.0.18
@@ -15948,7 +15948,7 @@ snapshots:
     dependencies:
       '@nxg-org/mineflayer-physics-util': https://codeload.github.com/zardoy/mineflayer-physics-utils/tar.gz/ab0402efd01020e61a7b800cf89a1485b4df82d7
       minecraft-data: 3.105.0
-      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/1c83189272348b9e12076465a748a5ecdd14acce(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
+      minecraft-protocol: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
       mojangson: 2.0.4
       prismarine-biome: 1.3.0(minecraft-data@3.105.0)(prismarine-registry@1.11.0)
       prismarine-block: https://codeload.github.com/zardoy/prismarine-block/tar.gz/401a296892fbde312ade34685fdc2db3d31668ad
