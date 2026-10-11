@@ -104,6 +104,19 @@ const countVerts = (scene: THREE.Object3D) => {
   return n
 }
 
+/**
+ * A body builds its third-person held item when its equipment changes, so a look that finishes loading later
+ * (the usual case on join) would leave the stand-in in every hand but our first-person one. Rebuild the held
+ * items of every body, ours included, now that this look exists.
+ */
+const redrawHeld = () => {
+  const entities = (globalThis as any).world?.entities
+  if (typeof entities?.updateEntityEquipment !== 'function') return
+  for (const e of [entities.playerEntity, ...Object.values(entities.entities ?? {})] as any[]) {
+    if (e?.originalEntity?.equipment) entities.updateEntityEquipment(e, e.originalEntity)
+  }
+}
+
 /** Handle one `openplace:look`. A refused or failed look leaves the stand-in. */
 export const onLook = async (grant: string, url: string, sha: string) => {
   if (!HEX64.test(grant) || !HEX64.test(sha) || !meshUrlAllowed(url, pinnedOrigin)) {
@@ -124,6 +137,7 @@ export const onLook = async (grant: string, url: string, sha: string) => {
     if (models.size >= MAX_MODELS) models.delete(models.keys().next().value!)
     models.set(grant, normalize(gltf.scene))
     console.debug('[placeschema] look loaded', grant)
+    redrawHeld()
   } catch (e) {
     started.delete(grant) // a later look message may retry
     console.warn('[placeschema]', grant, 'stays a stand-in:', String(e))
