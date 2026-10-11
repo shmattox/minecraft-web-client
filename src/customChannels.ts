@@ -41,8 +41,10 @@ export default () => {
       registerTypingIndicatorChannel()
       registerVoiceChatChannel()
       registerPlaceSchemaPortalChannel()
-      registerPlaceSchemaLookChannels()
+      // menu first: the look channels send openplace:caps, which the server answers with openplace:menu_tier,
+      // and Paper drops a plugin message on a channel the client has not registered yet
       registerPlaceSchemaMenuChannels()
+      registerPlaceSchemaLookChannels()
     })
   })
 }
