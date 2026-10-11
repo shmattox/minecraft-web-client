@@ -27,6 +27,9 @@ patchedDependencies:
   minecraft-protocol:
     hash: 0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2
     path: patches/minecraft-protocol@1.66.0.patch
+  minecraft-inventory@0.1.47:
+    hash: bce4451173335157957d6518d94d439512e910848c239427a00cc424f77a6036
+    path: patches/minecraft-inventory@0.1.47.patch
   minecraft-renderer@0.1.99:
     hash: fa94db539d6e9092e11854072ccda6ba366d809794de378d99cd386be6f238d2
     path: patches/minecraft-renderer@0.1.99.patch
@@ -160,7 +163,7 @@ importers:
         version: 3.105.0
       minecraft-inventory:
         specifier: ^0.1.47
-        version: 0.1.47(@xmcl/text-component@2.1.3)(mc-assets@0.2.72)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 0.1.47(patch_hash=bce4451173335157957d6518d94d439512e910848c239427a00cc424f77a6036)(@xmcl/text-component@2.1.3)(mc-assets@0.2.72)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       minecraft-protocol:
         specifier: github:PrismarineJS/node-minecraft-protocol#master
         version: https://codeload.github.com/PrismarineJS/node-minecraft-protocol/tar.gz/aa23a03964bf84e2f7fe813818a4ec5b7b2a1270(patch_hash=0cffd9b015010b93745754a43578ac24b7884db120779da4a30ca49b6db186f2)(encoding@0.1.13)
@@ -15864,7 +15867,7 @@ snapshots:
 
   minecraft-folder-path@1.2.0: {}
 
-  minecraft-inventory@0.1.47(@xmcl/text-component@2.1.3)(mc-assets@0.2.72)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  minecraft-inventory@0.1.47(patch_hash=bce4451173335157957d6518d94d439512e910848c239427a00cc424f77a6036)(@xmcl/text-component@2.1.3)(mc-assets@0.2.72)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@xmcl/text-component': 2.1.3
       react: 18.3.1
