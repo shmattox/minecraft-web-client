@@ -60,12 +60,17 @@ const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map(b => b.toString(1
 
 /** A vanilla item sprite is a 1x1 square drawn corner to corner; a sword's blade spans about this much of it. */
 const VANILLA_ITEM_LENGTH = 1.35
+/** Where the vanilla iron sword's grip sits in the sprite (x = px/16 - 0.5, y = -(py/16 - 0.5)), and its grip-to-tip length. */
+const VANILLA_GRIP = new THREE.Vector3(-0.28, -0.28, 0)
+const VANILLA_GRIP_TO_TIP = 0.98
 
 /**
- * Fit the model where the renderer expects a vanilla item: centred, its longest side as long as a vanilla
- * sword, and a +Y-up item (our grip convention: blade up, grip at the origin) tipped 45 degrees so it runs
- * from bottom-left to top-right like the sprite it replaces. Materials become unlit (MeshBasicMaterial with
- * the same colour and texture): the world has no environment map, so metallic PBR materials render black.
+ * Fit the model where the renderer expects a vanilla item. A +Y-up item (the held convention the sidecar
+ * normalizes to: blade up, grip at the origin) keeps its grip at the vanilla sword's grip, is scaled to the
+ * vanilla grip-to-tip length and tipped 45 degrees like the sprite it replaces, so the hand holds it in first
+ * and third person alike. Anything else is centred at vanilla sword length. Materials become unlit
+ * (MeshBasicMaterial with the same colour and texture): the world has no environment map, so metallic PBR
+ * materials render black.
  */
 const normalize = (scene: THREE.Object3D): THREE.Object3D => {
   scene.traverse(o => {
@@ -80,12 +85,16 @@ const normalize = (scene: THREE.Object3D): THREE.Object3D => {
   const box = new THREE.Box3().setFromObject(scene)
   const size = box.getSize(new THREE.Vector3())
   const longest = Math.max(size.x, size.y, size.z)
-  const centre = box.getCenter(new THREE.Vector3())
   const fit = new THREE.Group()
-  scene.position.sub(centre)
   fit.add(scene)
+  if (size.y === longest && box.max.y > 0) {
+    fit.scale.setScalar(VANILLA_GRIP_TO_TIP / box.max.y)
+    fit.rotation.z = -Math.PI / 4
+    fit.position.copy(VANILLA_GRIP)
+    return fit
+  }
+  scene.position.sub(box.getCenter(new THREE.Vector3()))
   if (longest > 0) fit.scale.setScalar(VANILLA_ITEM_LENGTH / longest)
-  if (size.y === longest) fit.rotation.z = -Math.PI / 4
   return fit
 }
 
