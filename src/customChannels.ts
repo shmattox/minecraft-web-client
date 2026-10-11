@@ -10,6 +10,7 @@ import { lastConnectOptions } from './appStatus'
 import { gameAdditionalState, miscUiState } from './globalState'
 import { placeschemaPortalTarget } from './placeschemaPortal'
 import { installLooks, MAX_BYTES, MAX_VERTS, onLook, pinOrigin, resetLooks } from './placeschemaLooks'
+import { onMenuOpenRequest, placeschemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -41,6 +42,7 @@ export default () => {
       registerVoiceChatChannel()
       registerPlaceSchemaPortalChannel()
       registerPlaceSchemaLookChannels()
+      registerPlaceSchemaMenuChannels()
     })
   })
 }
@@ -82,6 +84,24 @@ const registerPlaceSchemaPortalChannel = () => {
 }
 
 /**
+ * PlaceSchema in-game menu (PLACE-1115): the plugin's PLACE-1032 channels, the same ones the Fabric mod uses.
+ */
+const registerPlaceSchemaMenuChannels = () => {
+  setMenuTier('off')
+  placeschemaMenu.items = []
+  const str = { type: 'string' }
+  registerChannel('openplace:menu_tier', ['container', [{ name: 'tier', ...str }]], (data) => setMenuTier(data.tier), false)
+  registerChannel('openplace:account', ['container', [{ name: 'holder', ...str }]], (data) => setAccount(data.holder), true)
+  registerChannel('openplace:skin', ['container', [{ name: 'url', ...str }, { name: 'model', ...str }]], (data) => setSkin(data.url, data.model), true)
+  registerChannel('openplace:items', ['container', [{
+    name: 'items', type: ['array', { countType: 'varint', type: ['container', [{ name: 'label', ...str }, { name: 'state', ...str }]] }]
+  }]], (data) => { placeschemaMenu.items = (data.items ?? []).slice(0, 64) }, false)
+  const MENU = 'openplace:menu'
+  bot._client.registerChannel(MENU, ['container', []], true)
+  onMenuOpenRequest(() => bot._client.writeChannel(MENU, {}))
+}
+
+/**
  * PlaceSchema carried-item looks (PLACE-1013): announce mesh support with `openplace:caps` (the mod's probe
  * format), pin the server's sidecar origin from `openplace:origin`, and load each `openplace:look`.
  */
@@ -90,7 +110,7 @@ const registerPlaceSchemaLookChannels = () => {
   installLooks()
   // Local testing only: config.json placeschemaDebugLooks exposes these so a look can be driven by hand against an
   // offline server with no plugin. The production config never sets it.
-  if ((miscUiState.appConfig as any)?.placeschemaDebugLooks) (globalThis as any).placeschemaLooks = { pinOrigin, onLook }
+  if ((miscUiState.appConfig as any)?.placeschemaDebugLooks) (globalThis as any).placeschemaLooks = { pinOrigin, onLook, setMenuTier, setAccount, setSkin, placeschemaMenu }
   const str = { type: 'string' }
   registerChannel('openplace:origin', ['container', [{ name: 'origin', ...str }]], (data) => pinOrigin(data.origin), false)
   registerChannel('openplace:look', ['container', [{ name: 'grant', ...str }, { name: 'url', ...str }, { name: 'sha', ...str }]],

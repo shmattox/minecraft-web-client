@@ -47,6 +47,7 @@ import SignInMessageProvider from './react/SignInMessageProvider'
 import BookProvider from './react/BookProvider'
 import { options } from './optionsStorage'
 import BossBarOverlayProvider from './react/BossBarOverlayProvider'
+import { PlaceSchemaHud, PlaceSchemaMenuModal } from './placeschemaMenu'
 import VoiceChatConsentProvider from './react/VoiceChatConsentProvider'
 import VoiceChatMenuProvider from './react/VoiceChatMenuProvider'
 import ModsPage from './react/ModsPage'
@@ -185,6 +186,7 @@ const InGameUi = () => {
           {!disabledUiParts.includes('books') && <BookProvider />}
           {!disabledUiParts.includes('bossbars') && displayBossBars && <BossBarOverlayProvider />}
           <VoiceMicrophone />
+          <PlaceSchemaHud />
           <ChunksDebugScreen />
           <RendererDebugMenu />
           {!disabledUiParts.includes('fire') && <FireRenderer />}
@@ -193,6 +195,7 @@ const InGameUi = () => {
 
       <PerComponentErrorBoundary>
         <PauseScreen />
+        <PlaceSchemaMenuModal />
         <FullscreenTime />
         <MineflayerPluginHud />
         <MineflayerPluginConsole />
