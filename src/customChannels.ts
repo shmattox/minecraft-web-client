@@ -76,6 +76,7 @@ const registerPlaceSchemaPortalChannel = () => {
       return
     }
     bot._client.writeChannel(OPENED, {})
+    ;(window as any).placeschemaLeaving = true // skip the close-confirmation prompt for this hop
     window.location.href = target
   }, false)
 }
@@ -87,6 +88,9 @@ const registerPlaceSchemaPortalChannel = () => {
 const registerPlaceSchemaLookChannels = () => {
   resetLooks()
   installLooks()
+  // Local testing only: config.json placeschemaDebugLooks exposes these so a look can be driven by hand against an
+  // offline server with no plugin. The production config never sets it.
+  if ((miscUiState.appConfig as any)?.placeschemaDebugLooks) (globalThis as any).placeschemaLooks = { pinOrigin, onLook }
   const str = { type: 'string' }
   registerChannel('openplace:origin', ['container', [{ name: 'origin', ...str }]], (data) => pinOrigin(data.origin), false)
   registerChannel('openplace:look', ['container', [{ name: 'grant', ...str }, { name: 'url', ...str }, { name: 'sha', ...str }]],

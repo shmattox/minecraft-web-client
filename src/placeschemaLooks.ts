@@ -138,3 +138,4 @@ const itemModel = (item: any) => {
 }
 
 export const installLooks = () => { (globalThis as any).placeschemaItemModel = itemModel }
+

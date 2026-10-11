@@ -22,6 +22,8 @@ window.addEventListener('beforeunload', (event) => {
     sessionStorage.justReloaded = false
   }
 
+  // PlaceSchema (PLACE-1012): a server portal moving this tab is a deliberate exit, not an accidental close.
+  if ((window as any).placeschemaLeaving) return
   // todo-low maybe exclude chat?
   if (!isGameActive(true) && activeModalStack.at(-1)?.elem?.id !== 'chat') return
   if (sessionStorage.lastReload && !options.preventDevReloadWhilePlaying) return
