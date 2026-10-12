@@ -41,7 +41,10 @@ export const resetPlaceSchemaMenu = () => {
   sendAvatar = undefined
 }
 
-export const setMenuTier = (t: string) => { placeschemaMenu.tier = t === 'full' || t === 'partial' ? t : 'off' }
+export const setMenuTier = (t: string) => {
+  placeschemaMenu.tier = t === 'full' || t === 'partial' ? t : 'off'
+  applyAvatar() // turning the menu off puts the player's own body back
+}
 
 export const setAccount = (holder: string) => {
   placeschemaMenu.holder = /^[\da-f]{64}$/.test(holder) ? holder : ''
@@ -92,9 +95,13 @@ const nativeSkin = () => {
 /** Put the chosen body on the local player, live. A carried choice without a carried skin falls back to native. */
 export const applyAvatar = () => {
   if (!bot?.entity) return
-  const { avatar, skin } = placeschemaMenu
-  const url = avatar === 'generic' ? genericSkin() : avatar === 'carried' && skin.url ? skin.url : nativeSkin()
-  void getThreeJsRendererMethods()?.updatePlayerSkin(bot.entity.id, bot.username, bot.player?.uuid, url ?? true, undefined)
+  const { skin, tier } = placeschemaMenu
+  const avatar = tier === 'off' ? 'native' : placeschemaMenu.avatar // no PlaceSchema menu here: the player's own body
+  const custom = avatar === 'generic' || (avatar === 'carried' && !!skin.url)
+  const url = avatar === 'generic' ? genericSkin() : custom ? skin.url : nativeSkin()
+  // The renderer caches a skin per uuid and `true` reuses it, so a custom body passes no uuid: Native then finds
+  // the player's own skin (cached, or looked up by name) rather than the last custom one.
+  void getThreeJsRendererMethods()?.updatePlayerSkin(bot.entity.id, bot.username, custom ? undefined : bot.player?.uuid, url ?? true, undefined)
   if (appViewer?.playerState?.reactive) appViewer.playerState.reactive.playerSkin = url
 }
 

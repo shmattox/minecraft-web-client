@@ -51,9 +51,20 @@ export const pinOrigin = (origin: string) => {
   pinnedOrigin = origin
 }
 
+/** GPU resources go when a model does: geometries, materials and their textures. */
+const dispose = (model: THREE.Object3D) => model.traverse(o => {
+  const mesh = o as THREE.Mesh
+  mesh.geometry?.dispose()
+  for (const m of [mesh.material ?? []].flat() as THREE.Material[]) {
+    for (const v of Object.values(m)) if ((v as THREE.Texture)?.isTexture) (v as THREE.Texture).dispose()
+    m.dispose()
+  }
+})
+
 export const resetLooks = () => {
   session++
   pinnedOrigin = undefined
+  for (const model of models.values()) dispose(model)
   models.clear()
   started.clear()
 }
@@ -160,6 +171,7 @@ export const onLook = async (grant: string, url: string, sha: string) => {
     if (mine !== session) return // the player moved on to another server meanwhile
     if (models.size >= MAX_MODELS) {
       const evicted = models.keys().next().value!
+      dispose(models.get(evicted)!)
       models.delete(evicted)
       started.delete(evicted) // a later look for it may load it again
     }
