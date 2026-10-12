@@ -1,17 +1,79 @@
 diff --git a/src/three/entities.ts b/src/three/entities.ts
-index 63528f72edf38a894c102d04c696350d320de81c..4a7f06c39697a3730be13c00c55e5b53c5792872 100644
+index 63528f72edf38a894c102d04c696350d320de81c..4a03b7422efd3bb50d31d60e1a79bc1365125143 100644
 --- a/src/three/entities.ts
 +++ b/src/three/entities.ts
-@@ -963,6 +963,8 @@ export class Entities {
+@@ -850,6 +850,8 @@ export class Entities {
+ 
+   uuidPerSkinUrlsCache = {} as Record<string, { skinUrl?: string; capeUrl?: string }>
+   currentSkinUrls = {} as Record<string, string>
++  /** PlaceSchema (PLACE-1157): each entity's latest skin request; an older request's lookup or load never applies. */
++  skinRequests = {} as Record<string, number>
+ 
+   private isCanvasBlank(canvas: HTMLCanvasElement | OffscreenCanvas): boolean {
+     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
+@@ -865,6 +867,9 @@ export class Entities {
+     skinUrl: string | true,
+     capeUrl: string | true | undefined = undefined
+   ) {
++    const previous = this.skinRequests[String(entityId)] ?? 0
++    const request = previous + 1
++    this.skinRequests[String(entityId)] = request
+     const isCustomSkin = skinUrl !== stevePngUrl
+     if (isCustomSkin) {
+       this.loadedSkinEntityIds.add(String(entityId))
+@@ -886,14 +891,17 @@ export class Entities {
+       if (!username) return
+       const newSkinUrl = await loadSkinFromUsername(username, 'skin')
+       if (!this.getPlayerObject(entityId)) return
+-      if (!newSkinUrl) return
+-      skinUrl = newSkinUrl
++      if (this.skinRequests[String(entityId)] !== request) return // a newer choice was made while this name was looked up
++      // PlaceSchema (PLACE-1157): no skin for this name (an offline player) means the default body, not the last one shown
++      skinUrl = newSkinUrl || stevePngUrl
+     }
+ 
+     if (typeof skinUrl !== 'string') throw new Error('Invalid skin url')
+ 
+     // Skip if same skin URL is already loaded for this entity
+     if (this.currentSkinUrls[String(entityId)] === skinUrl) {
++      // the same skin is already the entity's target: the request loading it stays the current one
++      if (this.skinRequests[String(entityId)] === request) this.skinRequests[String(entityId)] = previous
+       // Still handle cape if needed
+       if (capeUrl) {
+         if (capeUrl === true && username) {
+@@ -913,7 +921,7 @@ export class Entities {
+       this.currentSkinUrls[String(entityId)] = skinUrl
+     }
+     const renderEars = this.worldRenderer.worldRendererConfig.renderEars || username === 'deadmau5'
+-    void this.loadAndApplySkin(entityId, skinUrl, renderEars).then(async () => {
++    void this.loadAndApplySkin(entityId, skinUrl, renderEars, request).then(async () => {
+       if (capeUrl) {
+         if (capeUrl === true && username) {
+           const newCapeUrl = await loadSkinFromUsername(username, 'cape')
+@@ -944,7 +952,7 @@ export class Entities {
+     await this.updatePlayerSkin(entityId, username, uuid, skinUrl, undefined)
+   }
+ 
+-  private async loadAndApplySkin(entityId: string | number, skinUrl: string, renderEars: boolean) {
++  private async loadAndApplySkin(entityId: string | number, skinUrl: string, renderEars: boolean, request?: number) {
+     let playerObject = this.getPlayerObject(entityId)
+     if (!playerObject) return
+ 
+@@ -958,11 +966,13 @@ export class Entities {
+       let skinCanvas: OffscreenCanvas
+       if (skinUrl === stevePngUrl) {
+         const steveSkin = await loadSkinImage(stevePngUrl)
++        if (request !== undefined && this.skinRequests[String(entityId)] !== request) return // a newer choice won meanwhile
+         playerCustomSkinImage = steveSkin.image
+         skinTexture = new THREE.CanvasTexture(steveSkin.canvas)
          skinCanvas = steveSkin.canvas
        } else {
          const { canvas, image } = await loadSkinImage(skinUrl)
-+        // PlaceSchema (PLACE-1157): a newer skin was asked for while this one loaded; the late image must not win
-+        if (this.currentSkinUrls[String(entityId)] !== skinUrl) return
++        if (request !== undefined && this.skinRequests[String(entityId)] !== request) return // a newer choice won meanwhile
          playerCustomSkinImage = image
          skinTexture = new THREE.CanvasTexture(canvas)
          skinCanvas = canvas
-@@ -1093,6 +1095,13 @@ export class Entities {
+@@ -1093,6 +1103,13 @@ export class Entities {
  
    getItemMesh(item, specificProps: ItemSpecificContextProperties, faceCamera = false, previousModel?: string) {
      if (!item.nbt && item.nbtData) item.nbt = item.nbtData
