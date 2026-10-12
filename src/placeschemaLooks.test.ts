@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { grantOf, meshUrlAllowed } from './placeschemaLooks'
+import { externalUris, grantOf, meshUrlAllowed } from './placeschemaLooks'
 
 const pin = 'https://mc-sidecar.placeschema.com'
 const g = 'a'.repeat(64)
@@ -26,5 +26,26 @@ describe('grantOf', () => {
   it('ignores items without a well-formed grant', () => {
     expect(grantOf({})).toBeUndefined()
     expect(grantOf({ nbt: { PublicBukkitValues: { 'openplace:grant': 'nope' } } })).toBeUndefined()
+  })
+})
+
+const glb = (json: object) => {
+  const text = new TextEncoder().encode(JSON.stringify(json).padEnd(Math.ceil(JSON.stringify(json).length / 4) * 4, ' '))
+  const out = new ArrayBuffer(20 + text.length), v = new DataView(out)
+  v.setUint32(0, 0x46_54_6C_67, true); v.setUint32(4, 2, true); v.setUint32(8, out.byteLength, true)
+  v.setUint32(12, text.length, true); v.setUint32(16, 0x4E_4F_53_4A, true)
+  new Uint8Array(out, 20).set(text)
+  return out
+}
+
+describe('PLACE-1157 review: a look names no external resource', () => {
+  it('accepts a GLB whose buffer is its own binary chunk', () => {
+    expect(externalUris(glb({ asset: { version: '2.0' }, buffers: [{ byteLength: 4 }] }))).toBe(false)
+  })
+  it('refuses a buffer or image with an outside uri, and anything that is not a GLB', () => {
+    expect(externalUris(glb({ asset: { version: '2.0' }, buffers: [{ byteLength: 4, uri: 'https://elsewhere.example/b.bin' }] }))).toBe(true)
+    expect(externalUris(glb({ asset: { version: '2.0' }, images: [{ uri: 'textures/skin.png' }] }))).toBe(true)
+    expect(externalUris(glb({ asset: { version: '2.0' }, images: [{ uri: 'data:image/png;base64,AA' }] }))).toBe(false) // inside the hash
+    expect(externalUris(new ArrayBuffer(8))).toBe(true)
   })
 })

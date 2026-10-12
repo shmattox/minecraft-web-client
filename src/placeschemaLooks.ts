@@ -98,6 +98,17 @@ const normalize = (scene: THREE.Object3D): THREE.Object3D => {
   return fit
 }
 
+/** True when a GLB's JSON gives any buffer or image a `uri` outside the file (a `data:` URI is inside the hash). Unreadable = refuse. */
+export const externalUris = (bytes: ArrayBuffer): boolean => {
+  try {
+    const view = new DataView(bytes)
+    if (view.getUint32(0, true) !== 0x46_54_6C_67) return true // 'glTF'
+    const length = view.getUint32(12, true)
+    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, length)))
+    return [...(json.buffers ?? []), ...(json.images ?? [])].some((x: any) => x?.uri !== undefined && !(typeof x.uri === 'string' && x.uri.startsWith('data:')))
+  } catch { return true }
+}
+
 const countVerts = (scene: THREE.Object3D) => {
   let n = 0
   scene.traverse(o => { const g = (o as THREE.Mesh).geometry; if (g?.attributes?.position) n += g.attributes.position.count })
@@ -132,9 +143,15 @@ export const onLook = async (grant: string, url: string, sha: string) => {
     if (bytes.byteLength > MAX_BYTES) throw new Error(`mesh over ${MAX_BYTES} bytes`)
     const got = hex(await crypto.subtle.digest('SHA-256', bytes))
     if (got !== sha) throw new Error(`sha256 mismatch: ${got}`)
+    // the hash covers only this file: a buffer or image it names by URI would load unchecked, from anywhere
+    if (externalUris(bytes)) throw new Error('mesh names an external resource')
     const gltf = await new GLTFLoader().parseAsync(bytes, '')
     if (countVerts(gltf.scene) > MAX_VERTS) throw new Error('mesh too big')
-    if (models.size >= MAX_MODELS) models.delete(models.keys().next().value!)
+    if (models.size >= MAX_MODELS) {
+      const evicted = models.keys().next().value!
+      models.delete(evicted)
+      started.delete(evicted) // a later look for it may load it again
+    }
     models.set(grant, normalize(gltf.scene))
     console.debug('[placeschema] look loaded', grant)
     redrawHeld()

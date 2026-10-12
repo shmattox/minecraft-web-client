@@ -9,6 +9,7 @@ import { getPlayerStateUtils } from 'minecraft-renderer/src'
 import { options, watchValue } from './optionsStorage'
 import { gameAdditionalState, miscUiState } from './globalState'
 import { EntityStatus } from './mineflayer/entityStatus'
+import { applyAvatar } from './placeschemaMenu'
 import {
   applyEntityMovementAnimation,
   clearLocalPlayerAnimationCache,
@@ -265,6 +266,8 @@ customEvents.on('gameLoaded', () => {
   // Texture override from packet properties
   const updateSkin = (player: import('mineflayer').Player) => {
     if (!player.uuid || !player.username || !player.skinData) return
+    // PLACE-1157: the local player wears the PlaceSchema menu's chosen body; a player-list update must not revert it
+    if (player.uuid === bot.player?.uuid) { applyAvatar(); return }
 
     try {
       const skinUrl = applySkinTexturesProxy(player.skinData.url)
