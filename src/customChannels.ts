@@ -10,7 +10,7 @@ import { lastConnectOptions } from './appStatus'
 import { gameAdditionalState, miscUiState } from './globalState'
 import { placeschemaPortalTarget } from './placeschemaPortal'
 import { installLooks, MAX_BYTES, MAX_VERTS, onLook, pinOrigin, resetLooks } from './placeschemaLooks'
-import { onMenuOpenRequest, placeschemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
+import { onArrivedAvatar, onAvatarSend, onMenuOpenRequest, placeschemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -101,6 +101,11 @@ const registerPlaceSchemaMenuChannels = () => {
   const MENU = 'openplace:menu'
   bot._client.registerChannel(MENU, ['container', []], true)
   onMenuOpenRequest(() => bot._client.writeChannel(MENU, {}))
+  // PLACE-1157: the avatar choice travels with a portal hop. One shape both ways: the server sends an arrival's
+  // (choice, landing id); we send our current choice with an empty landing whenever it changes.
+  const AVATAR = 'openplace:avatar'
+  registerChannel(AVATAR, ['container', [{ name: 'choice', ...str }, { name: 'landing', ...str }]], (data) => onArrivedAvatar(data.choice, data.landing), true)
+  onAvatarSend((choice) => bot._client.writeChannel(AVATAR, { choice, landing: '' }))
 }
 
 /**

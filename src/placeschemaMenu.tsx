@@ -25,6 +25,15 @@ export const placeschemaMenu = proxy({
 
 const MODAL = 'placeschema-menu'
 const avatarKey = () => `placeschema-avatar:${placeschemaMenu.holder || 'unlinked'}`
+const landingKey = () => `placeschema-avatar-landing:${placeschemaMenu.holder || 'unlinked'}`
+const isChoice = (c: unknown): c is AvatarChoice => c === 'native' || c === 'carried' || c === 'generic'
+
+// PLACE-1157: tell the server the body shown now, so a portal hop carries it to the next place
+let sendAvatar: ((choice: AvatarChoice) => void) | undefined
+export const onAvatarSend = (fn: (choice: AvatarChoice) => void) => {
+  sendAvatar = fn
+  fn(placeschemaMenu.avatar)
+}
 
 export const setMenuTier = (t: string) => { placeschemaMenu.tier = t === 'full' || t === 'partial' ? t : 'off' }
 
@@ -35,6 +44,7 @@ export const setAccount = (holder: string) => {
     placeschemaMenu.avatar = saved === 'carried' || saved === 'generic' ? saved : 'native'
   } catch { placeschemaMenu.avatar = 'native' }
   applyAvatar()
+  sendAvatar?.(placeschemaMenu.avatar)
 }
 
 export const setSkin = (url: string, model: string) => {
@@ -86,6 +96,17 @@ export const chooseAvatar = (choice: AvatarChoice) => {
   placeschemaMenu.avatar = choice
   try { localStorage.setItem(avatarKey(), choice) } catch {}
   applyAvatar()
+  sendAvatar?.(choice)
+}
+
+/** PLACE-1157: the choice made where the player left from, worn once per landing and kept as this game's own. */
+export const onArrivedAvatar = (choice: unknown, landing: unknown) => {
+  if (!isChoice(choice) || typeof landing !== 'string' || !/^[\da-f]{32}$/.test(landing)) return
+  try {
+    if (localStorage.getItem(landingKey()) === landing) return // already worn: a choice made here since stands
+    localStorage.setItem(landingKey(), landing)
+  } catch {}
+  chooseAvatar(choice)
 }
 
 let requestItems: (() => void) | undefined
