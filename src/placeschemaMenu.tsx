@@ -92,6 +92,12 @@ const nativeSkin = () => {
   return url && proxyBase ? url.replace(/^https?:\/\/textures\.minecraft\.net\//, proxyBase) : url
 }
 
+const nativeCape = () => {
+  const url = (bot?.player as any)?.skinData?.capeUrl as string | undefined
+  const proxyBase = miscUiState.appConfig?.skinTexturesProxy
+  return url && proxyBase ? url.replace(/^https?:\/\/textures\.minecraft\.net\//, proxyBase) : url
+}
+
 /** Put the chosen body on the local player, live. A carried choice without a carried skin falls back to native. */
 export const applyAvatar = () => {
   if (!bot?.entity) return
@@ -101,7 +107,9 @@ export const applyAvatar = () => {
   const url = avatar === 'generic' ? genericSkin() : custom ? skin.url : nativeSkin()
   // The renderer caches a skin per uuid and `true` reuses it, so a custom body passes no uuid: Native then finds
   // the player's own skin (cached, or looked up by name) rather than the last custom one.
-  void getThreeJsRendererMethods()?.updatePlayerSkin(bot.entity.id, bot.username, custom ? undefined : bot.player?.uuid, url ?? true, undefined)
+  // the player's own cape stays on their own body (entities.ts would have passed it); a custom body has none
+  const cape = custom ? undefined : nativeCape()
+  void getThreeJsRendererMethods()?.updatePlayerSkin(bot.entity.id, bot.username, custom ? undefined : bot.player?.uuid, url ?? true, cape)
   if (appViewer?.playerState?.reactive) appViewer.playerState.reactive.playerSkin = url
 }
 
