@@ -2,7 +2,16 @@ diff --git a/src/three/entities.ts b/src/three/entities.ts
 index 63528f72edf38a894c102d04c696350d320de81c..4a7f06c39697a3730be13c00c55e5b53c5792872 100644
 --- a/src/three/entities.ts
 +++ b/src/three/entities.ts
-@@ -1093,6 +1093,13 @@ export class Entities {
+@@ -963,6 +963,8 @@ export class Entities {
+         skinCanvas = steveSkin.canvas
+       } else {
+         const { canvas, image } = await loadSkinImage(skinUrl)
++        // PlaceSchema (PLACE-1157): a newer skin was asked for while this one loaded; the late image must not win
++        if (this.currentSkinUrls[String(entityId)] !== skinUrl) return
+         playerCustomSkinImage = image
+         skinTexture = new THREE.CanvasTexture(canvas)
+         skinCanvas = canvas
+@@ -1093,6 +1095,13 @@ export class Entities {
  
    getItemMesh(item, specificProps: ItemSpecificContextProperties, faceCamera = false, previousModel?: string) {
      if (!item.nbt && item.nbtData) item.nbt = item.nbtData
