@@ -25,6 +25,7 @@ import { collectFilesToCopy, fileExistsAsyncOptimized, mkdirRecursive, uniqueFil
 import { appQueryParams } from '../appParams'
 import { downloadPacketsReplay, packetsRecordingState } from '../packetsReplay/packetsReplayLegacy'
 import { options } from '../optionsStorage'
+import { openPlaceSchemaMenu, placeschemaMenu } from '../placeschemaMenu'
 import { joinVoiceChat, leaveVoiceChat } from '../voice/voiceChat'
 import { useIsModalActive } from './utilsApp'
 import { showOptionsModal } from './SelectOption'
@@ -165,6 +166,7 @@ export default () => {
   const { noConnection } = useSnapshot(gameAdditionalState)
   const { active: packetsReplaceActive, hasRecordedPackets: packetsReplaceHasRecordedPackets } = useSnapshot(packetsRecordingState)
   const { displayRecordButton: displayPacketsButtons } = useSnapshot(options)
+  const { tier: placeschemaTier } = useSnapshot(placeschemaMenu)
   const { appConfig } = useSnapshot(miscUiState)
   const { active: voiceActive, serverSupportsVoice, isJoining: voiceJoining } = useSnapshot(voiceChatStatus)
 
@@ -277,6 +279,7 @@ export default () => {
     <div className={styles.pause_container}>
       <Button className="button" style={{ width: '204px' }} onClick={onReturnPress}>Back to Game</Button>
       <PauseLinkButtons />
+      {placeschemaTier !== 'off' && <Button className="button" style={{ width: '204px' }} onClick={openPlaceSchemaMenu}>PlaceSchema</Button>}
       <Button className="button" style={{ width: '204px' }} onClick={() => openOptionsMenu('main')}>Options...</Button>
       {serverSupportsVoice && (
         <Button

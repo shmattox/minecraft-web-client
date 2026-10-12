@@ -1,0 +1,19 @@
+diff --git a/src/hooks/useMobile.ts b/src/hooks/useMobile.ts
+index 68e8e3a715fd9efeaf454f78f4aa395633951bb9..a7ca7baed7259641ee5c51db8355d41476ec689d 100644
+--- a/src/hooks/useMobile.ts
++++ b/src/hooks/useMobile.ts
+@@ -4,11 +4,9 @@ let cachedIsMobile: boolean | null = null
+ 
+ function detectMobile(): boolean {
+   if (typeof window === 'undefined') return false
+-  return (
+-    'ontouchstart' in window ||
+-    navigator.maxTouchPoints > 0 ||
+-    window.matchMedia('(pointer: coarse)').matches
+-  )
++  // PlaceSchema (PLACE-1110): only a touch-first device is mobile. Touch-capable laptops report
++  // maxTouchPoints > 0 with a mouse as the primary pointer; treating them as mobile drops every mouse click.
++  return window.matchMedia('(pointer: coarse)').matches
+ }
+ 
+ export function useMobile(): boolean {

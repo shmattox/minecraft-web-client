@@ -7,7 +7,10 @@ import { registerIdeChannels } from './core/ideChannels'
 import { registerIframeChannels } from './core/iframeChannels'
 import { serverSafeSettings } from './defaultOptions'
 import { lastConnectOptions } from './appStatus'
-import { gameAdditionalState } from './globalState'
+import { gameAdditionalState, miscUiState } from './globalState'
+import { placeschemaPortalTarget } from './placeschemaPortal'
+import { installLooks, MAX_BYTES, MAX_VERTS, onLook, pinOrigin, resetLooks } from './placeschemaLooks'
+import { onArrivedAvatar, onAvatarSend, onMenuOpenRequest, placeschemaMenu, resetPlaceSchemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -22,6 +25,9 @@ const getIsCustomChannelsEnabled = () => {
 
 export default () => {
   customEvents.on('mineflayerBotCreated', async () => {
+    // every connection, with or without custom channels: nothing PlaceSchema carries over from the last server
+    resetPlaceSchemaMenu()
+    resetLooks()
     if (!getIsCustomChannelsEnabled()) return
     bot.once('login', () => {
       registerConnectMetadataChannel()
@@ -37,6 +43,11 @@ export default () => {
       registerServerSettingsChannel()
       registerTypingIndicatorChannel()
       registerVoiceChatChannel()
+      registerPlaceSchemaPortalChannel()
+      // menu first: the look channels send openplace:caps, which the server answers with openplace:menu_tier,
+      // and Paper drops a plugin message on a channel the client has not registered yet
+      registerPlaceSchemaMenuChannels()
+      registerPlaceSchemaLookChannels()
     })
   })
 }
@@ -53,6 +64,72 @@ const registerChannel = (channelName: string, packetStructure: any[], handler: (
   })
 
   console.debug(`registered custom channel ${channelName} channel`)
+}
+
+/**
+ * PlaceSchema portals (PLACE-1012): the server's `openplace:open_uri` carries the ticket URL when the
+ * player walks through its exit portal. Like the Fabric client mod, answer `openplace:opened` and go there,
+ * but in this same tab, and only to an https origin listed in config.json `placeschemaPortalOrigins`.
+ * Anything else is ignored, and the player keeps the chat link.
+ */
+const registerPlaceSchemaPortalChannel = () => {
+  const OPEN_URI = 'openplace:open_uri'
+  const OPENED = 'openplace:opened'
+  bot._client.registerChannel(OPENED, ['container', []], true)
+  registerChannel(OPEN_URI, ['container', [{ name: 'url', type: 'string' }]], (data) => {
+    const target = placeschemaPortalTarget(data.url, miscUiState.appConfig?.placeschemaPortalOrigins)
+    if (!target) {
+      console.warn('[placeschema] portal URL refused (not an allowlisted https origin)')
+      return
+    }
+    bot._client.writeChannel(OPENED, {})
+    ;(window as any).placeschemaLeaving = true // skip the close-confirmation prompt for this hop
+    window.location.href = target
+  }, false)
+}
+
+/**
+ * PlaceSchema in-game menu (PLACE-1115): the plugin's PLACE-1032 channels, the same ones the Fabric mod uses.
+ */
+const registerPlaceSchemaMenuChannels = () => {
+  setMenuTier('off')
+  placeschemaMenu.items = []
+  const str = { type: 'string' }
+  registerChannel('openplace:menu_tier', ['container', [{ name: 'tier', ...str }]], (data) => setMenuTier(data.tier), false)
+  registerChannel('openplace:account', ['container', [{ name: 'holder', ...str }]], (data) => setAccount(data.holder), true)
+  registerChannel('openplace:skin', ['container', [{ name: 'url', ...str }, { name: 'model', ...str }]], (data) => setSkin(data.url, data.model), true)
+  registerChannel('openplace:items', ['container', [{
+    name: 'items', type: ['array', { countType: 'varint', type: ['container', [{ name: 'label', ...str }, { name: 'state', ...str }]] }]
+  }]], (data) => { placeschemaMenu.items = (data.items ?? []).slice(0, 64) }, false)
+  const MENU = 'openplace:menu'
+  bot._client.registerChannel(MENU, ['container', []], true)
+  onMenuOpenRequest(() => bot._client.writeChannel(MENU, {}))
+  // PLACE-1157: the avatar choice travels with a portal hop. One shape both ways: the server sends an arrival's
+  // (choice, landing id); we send our current choice with an empty landing whenever it changes.
+  const AVATAR = 'openplace:avatar'
+  registerChannel(AVATAR, ['container', [{ name: 'choice', ...str }, { name: 'landing', ...str }]], (data) => onArrivedAvatar(data.choice, data.landing), true)
+  onAvatarSend((choice) => bot._client.writeChannel(AVATAR, { choice, landing: '' }))
+}
+
+/**
+ * PlaceSchema carried-item looks (PLACE-1013): announce mesh support with `openplace:caps` (the mod's probe
+ * format), pin the server's sidecar origin from `openplace:origin`, and load each `openplace:look`.
+ */
+const registerPlaceSchemaLookChannels = () => {
+  resetLooks()
+  installLooks()
+  // Local testing only: config.json placeschemaDebugLooks exposes these so a look can be driven by hand against an
+  // offline server with no plugin. The production config never sets it.
+  if ((miscUiState.appConfig as any)?.placeschemaDebugLooks) (globalThis as any).placeschemaLooks = { pinOrigin, onLook, setMenuTier, setAccount, setSkin, placeschemaMenu }
+  const str = { type: 'string' }
+  registerChannel('openplace:origin', ['container', [{ name: 'origin', ...str }]], (data) => pinOrigin(data.origin), false)
+  registerChannel('openplace:look', ['container', [{ name: 'grant', ...str }, { name: 'url', ...str }, { name: 'sha', ...str }]],
+    (data) => { void onLook(data.grant, data.url, data.sha) }, false)
+  const CAPS = 'openplace:caps'
+  bot._client.registerChannel(CAPS, ['container', [
+    { name: 'protocol', type: 'varint' }, { name: 'mesh', type: 'bool' }, { name: 'maxBytes', type: 'varint' }, { name: 'maxVerts', type: 'varint' }
+  ]], true)
+  bot._client.writeChannel(CAPS, { protocol: 1, mesh: true, maxBytes: MAX_BYTES, maxVerts: MAX_VERTS })
 }
 
 const registerConnectMetadataChannel = () => {

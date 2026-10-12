@@ -1,0 +1,103 @@
+diff --git a/src/three/entities.ts b/src/three/entities.ts
+index 63528f72edf38a894c102d04c696350d320de81c..4a03b7422efd3bb50d31d60e1a79bc1365125143 100644
+--- a/src/three/entities.ts
++++ b/src/three/entities.ts
+@@ -850,6 +850,8 @@ export class Entities {
+ 
+   uuidPerSkinUrlsCache = {} as Record<string, { skinUrl?: string; capeUrl?: string }>
+   currentSkinUrls = {} as Record<string, string>
++  /** PlaceSchema (PLACE-1157): each entity's latest skin request; an older request's lookup or load never applies. */
++  skinRequests = {} as Record<string, number>
+ 
+   private isCanvasBlank(canvas: HTMLCanvasElement | OffscreenCanvas): boolean {
+     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
+@@ -865,6 +867,9 @@ export class Entities {
+     skinUrl: string | true,
+     capeUrl: string | true | undefined = undefined
+   ) {
++    const previous = this.skinRequests[String(entityId)] ?? 0
++    const request = previous + 1
++    this.skinRequests[String(entityId)] = request
+     const isCustomSkin = skinUrl !== stevePngUrl
+     if (isCustomSkin) {
+       this.loadedSkinEntityIds.add(String(entityId))
+@@ -886,14 +891,17 @@ export class Entities {
+       if (!username) return
+       const newSkinUrl = await loadSkinFromUsername(username, 'skin')
+       if (!this.getPlayerObject(entityId)) return
+-      if (!newSkinUrl) return
+-      skinUrl = newSkinUrl
++      if (this.skinRequests[String(entityId)] !== request) return // a newer choice was made while this name was looked up
++      // PlaceSchema (PLACE-1157): no skin for this name (an offline player) means the default body, not the last one shown
++      skinUrl = newSkinUrl || stevePngUrl
+     }
+ 
+     if (typeof skinUrl !== 'string') throw new Error('Invalid skin url')
+ 
+     // Skip if same skin URL is already loaded for this entity
+     if (this.currentSkinUrls[String(entityId)] === skinUrl) {
++      // the same skin is already the entity's target: the request loading it stays the current one
++      if (this.skinRequests[String(entityId)] === request) this.skinRequests[String(entityId)] = previous
+       // Still handle cape if needed
+       if (capeUrl) {
+         if (capeUrl === true && username) {
+@@ -913,7 +921,7 @@ export class Entities {
+       this.currentSkinUrls[String(entityId)] = skinUrl
+     }
+     const renderEars = this.worldRenderer.worldRendererConfig.renderEars || username === 'deadmau5'
+-    void this.loadAndApplySkin(entityId, skinUrl, renderEars).then(async () => {
++    void this.loadAndApplySkin(entityId, skinUrl, renderEars, request).then(async () => {
+       if (capeUrl) {
+         if (capeUrl === true && username) {
+           const newCapeUrl = await loadSkinFromUsername(username, 'cape')
+@@ -944,7 +952,7 @@ export class Entities {
+     await this.updatePlayerSkin(entityId, username, uuid, skinUrl, undefined)
+   }
+ 
+-  private async loadAndApplySkin(entityId: string | number, skinUrl: string, renderEars: boolean) {
++  private async loadAndApplySkin(entityId: string | number, skinUrl: string, renderEars: boolean, request?: number) {
+     let playerObject = this.getPlayerObject(entityId)
+     if (!playerObject) return
+ 
+@@ -958,11 +966,13 @@ export class Entities {
+       let skinCanvas: OffscreenCanvas
+       if (skinUrl === stevePngUrl) {
+         const steveSkin = await loadSkinImage(stevePngUrl)
++        if (request !== undefined && this.skinRequests[String(entityId)] !== request) return // a newer choice won meanwhile
+         playerCustomSkinImage = steveSkin.image
+         skinTexture = new THREE.CanvasTexture(steveSkin.canvas)
+         skinCanvas = steveSkin.canvas
+       } else {
+         const { canvas, image } = await loadSkinImage(skinUrl)
++        if (request !== undefined && this.skinRequests[String(entityId)] !== request) return // a newer choice won meanwhile
+         playerCustomSkinImage = image
+         skinTexture = new THREE.CanvasTexture(canvas)
+         skinCanvas = canvas
+@@ -1093,6 +1103,13 @@ export class Entities {
+ 
+   getItemMesh(item, specificProps: ItemSpecificContextProperties, faceCamera = false, previousModel?: string) {
+     if (!item.nbt && item.nbtData) item.nbt = item.nbtData
++    // PlaceSchema (PLACE-1013): a carried item with a loaded look draws its own model instead of the stand-in.
++    const carried = (globalThis as any).placeschemaItemModel?.(item)
++    if (carried) {
++      if (previousModel && previousModel === carried.modelName) return undefined
++      const ctx = specificProps['minecraft:display_context']
++      return { mesh: carried.make(ctx === 'ground' ? 0.5 : ctx === 'thirdperson' ? 6 : 1), isBlock: false, modelName: carried.modelName }
++    }
+     const textureUv = this.worldRenderer.getItemRenderData(item, specificProps)
+     if (previousModel && previousModel === textureUv?.modelName) return undefined
+ 
+diff --git a/src/three/holdingBlockItemIdentity.ts b/src/three/holdingBlockItemIdentity.ts
+index 2103314b98d1002389a6536da6b2e3cae6908828..156aa76c1a77eda7a2d64e98b47f374abb75ed67 100644
+--- a/src/three/holdingBlockItemIdentity.ts
++++ b/src/three/holdingBlockItemIdentity.ts
+@@ -15,6 +15,9 @@ const getFirstPersonItemIdentityProps = (): ItemSpecificContextProperties => ({
+ export const getHandItemRenderKey = (worldRenderer: WorldRendererThree, handItem?: HandItemBlock) => {
+   if (!handItem) return 'empty'
+   if (handItem.type === 'hand') return 'hand'
++  // PlaceSchema (PLACE-1013): the key changes when a carried item's look finishes loading, so the hand redraws.
++  const carried = (globalThis as any).placeschemaItemModel?.(handItem.fullItem)
++  if (carried) return `item:${carried.modelName}`
+ 
+   const itemIdentifier = handItem.name ?? (handItem.id !== undefined ? `#${handItem.id}` : 'unknown')
+   if (!worldRenderer.resourcesManager.currentResources) {
