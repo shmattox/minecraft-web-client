@@ -139,9 +139,8 @@ export const toMajorVersion = version => {
 
 let prevRenderDistance = options.renderDistance
 export const setRenderDistance = () => {
-  assertDefined(worldView)
-  const { renderDistance: singleplayerRenderDistance, multiplayerRenderDistance } = options
-  let renderDistance = miscUiState.singleplayer ? singleplayerRenderDistance : multiplayerRenderDistance
+  assertDefined(appViewer.worldView)
+  let { renderDistance } = options
   const zeroRenderDistance = miscUiState.singleplayer && renderDistance === 0
   if (zeroRenderDistance) {
     renderDistance = 1 // mineflayer limitation workaround
@@ -153,17 +152,17 @@ export const setRenderDistance = () => {
     localServer!.players[0].view = 0
     renderDistance = 0
   }
-  worldView?.updateViewDistance(renderDistance)
+  appViewer.worldView?.updateViewDistance(renderDistance)
   prevRenderDistance = renderDistance
 }
 export const reloadChunks = async () => {
-  if (!bot || !worldView) return
+  if (!bot || !appViewer.worldView) return
   setRenderDistance()
-  await worldView.updatePosition(bot.entity.position, true)
+  await appViewer.worldView.updatePosition(bot.entity.position, true)
 }
 
 export const openGithub = (addUrl = '') => {
-  window.open(`${process.env.GITHUB_URL}${addUrl}`, '_blank')
+  window.open(`${process.env.GITHUB_URL?.replace(/\/$/, '')}${addUrl}`, '_blank')
 }
 
 export const resolveTimeout = async (promise, timeout = 10_000) => {

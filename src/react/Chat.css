@@ -1,9 +1,15 @@
 div.chat-wrapper {
+  z-index: -1;
   /* increase specificity */
   position: fixed;
-  /* z-index: 10; */
   padding-left: calc(env(safe-area-inset-left) / 2);
   padding-right: calc(env(safe-area-inset-right, 4px) / 2);
+  box-sizing: content-box;
+}
+
+/* Only apply overflow hidden when not in mobile mode */
+div.chat-wrapper:not(.display-mobile):not(.input-mobile) {
+  /* overflow: hidden; */
 }
 
 .chat-messages-wrapper {
@@ -11,10 +17,21 @@ div.chat-wrapper {
   padding: 4px;
   padding-left: 0;
   max-height: var(--chatHeight);
-  width: var(--chatWidth);
+  /* Custom scrollbar width */
+  width: calc(var(--chatWidth) - 5px);
   transform-origin: bottom left;
   transform: scale(var(--chatScale));
   pointer-events: none;
+}
+
+/* Restore full width when chat is opened */
+.chat-messages-wrapper.chat-opened {
+  width: var(--chatWidth);
+}
+
+/* fix progress message should be below chat messages when opened */
+div.chat-wrapper.chat-messages-wrapper.display-mobile.chat-opened {
+  z-index: 10;
 }
 
 .chat-input-wrapper {
@@ -55,6 +72,8 @@ div.chat-wrapper {
   padding: 0 2px;
   /* input padding */
   width: 100%;
+  /* Above typing indicator so tab completion list is clickable */
+  z-index: 2;
 }
 
 .input-mobile .chat-completions {
@@ -62,7 +81,7 @@ div.chat-wrapper {
   top: 100%;
   padding-left: calc(env(safe-area-inset-left) / 2);
   margin-top: 14px;
-  margin-left: 20px;
+  margin-left: 40px;
   /* input height */
 }
 
@@ -109,6 +128,11 @@ div.chat-wrapper {
   justify-content: flex-start;
 }
 
+.input-mobile .chat-completions-items>div {
+  padding: 4px 0;
+  font-size: 10px;
+}
+
 .input-mobile {
   top: 15px;
   position: absolute;
@@ -119,6 +143,7 @@ div.chat-wrapper {
 .input-mobile #chatinput {
   height: 24px;
   font-size: 13px;
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .display-mobile {

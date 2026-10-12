@@ -3,7 +3,7 @@ import fs from 'fs'
 import { useEffect } from 'react'
 import { subscribe, useSnapshot } from 'valtio'
 import { usedServerPathsV1 } from 'flying-squid/dist/lib/modules/world'
-import { openURL } from 'renderer/viewer/lib/simpleUtils'
+import { openURL } from 'minecraft-renderer/src/lib/simpleUtils'
 import { Vec3 } from 'vec3'
 import { generateSpiralMatrix } from 'flying-squid/dist/utils'
 import { subscribeKey } from 'valtio/utils'
@@ -19,12 +19,13 @@ import {
 import { fsState } from '../loadSave'
 import { disconnect } from '../flyingSquidUtils'
 import { openGithub, pointerLock } from '../utils'
-import { setLoadingScreenStatus } from '../appStatus'
+import { setLoadingScreenStatus, lastConnectOptions } from '../appStatus'
 import { closeWan, openToWanAndCopyJoinLink, getJoinLink } from '../localServerMultiplayer'
 import { collectFilesToCopy, fileExistsAsyncOptimized, mkdirRecursive, uniqueFileNameFromWorldName } from '../browserfs'
 import { appQueryParams } from '../appParams'
 import { downloadPacketsReplay, packetsRecordingState } from '../packetsReplay/packetsReplayLegacy'
 import { options } from '../optionsStorage'
+import { joinVoiceChat, leaveVoiceChat } from '../voice/voiceChat'
 import { useIsModalActive } from './utilsApp'
 import { showOptionsModal } from './SelectOption'
 import Button from './Button'
@@ -37,6 +38,7 @@ import NetworkStatus from './NetworkStatus'
 import PauseLinkButtons from './PauseLinkButtons'
 import { pixelartIcons } from './PixelartIcon'
 import LoadingTimer from './LoadingTimer'
+import { voiceChatStatus } from './VoiceMicrophone'
 
 const waitForPotentialRender = async () => {
   return new Promise<void>(resolve => {
@@ -164,6 +166,7 @@ export default () => {
   const { active: packetsReplaceActive, hasRecordedPackets: packetsReplaceHasRecordedPackets } = useSnapshot(packetsRecordingState)
   const { displayRecordButton: displayPacketsButtons } = useSnapshot(options)
   const { appConfig } = useSnapshot(miscUiState)
+  const { active: voiceActive, serverSupportsVoice, isJoining: voiceJoining } = useSnapshot(voiceChatStatus)
 
   const handlePointerLockChange = () => {
     if (!pointerLock.hasPointerLock && activeModalStack.length === 0) {
@@ -262,10 +265,29 @@ export default () => {
         <NetworkStatus />
       </div>
     </ErrorBoundary>
+    {serverSupportsVoice && (
+      <div style={{ position: 'fixed', top: '5px', right: 'calc(env(safe-area-inset-right) + 5px)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <Button
+          title="Voice Chat Settings"
+          icon={pixelartIcons.sliders}
+          onClick={() => showModal({ reactType: 'voice-chat-menu' })}
+        />
+      </div>
+    )}
     <div className={styles.pause_container}>
       <Button className="button" style={{ width: '204px' }} onClick={onReturnPress}>Back to Game</Button>
       <PauseLinkButtons />
-      <Button className="button" style={{ width: '204px' }} onClick={() => openOptionsMenu('main')}>Options</Button>
+      <Button className="button" style={{ width: '204px' }} onClick={() => openOptionsMenu('main')}>Options...</Button>
+      {serverSupportsVoice && (
+        <Button
+          className="button"
+          style={{ width: '204px' }}
+          disabled={voiceJoining}
+          onClick={() => (voiceActive ? leaveVoiceChat() : joinVoiceChat())}
+        >
+          {voiceJoining ? 'Joining…' : voiceActive ? 'Leave Voice Chat' : 'Join Voice Chat'}
+        </Button>
+      )}
       {singleplayer ? (
         <div className={styles.row}>
           <Button className="button" style={{ width: '170px' }} onClick={async () => clickJoinLinkButton()}>
@@ -289,16 +311,58 @@ export default () => {
           />
         </div>
       ) : null}
+      {(noConnection || appConfig?.alwaysReconnectButton) && (
+        <div className={styles.row}>
+          <Button className="button" style={{ width: appConfig?.reportBugButtonWithReconnect ? '98px' : '204px' }} onClick={reconnectReload}>
+            Reconnect
+          </Button>
+          {appConfig?.reportBugButtonWithReconnect && (
+            <Button
+              label="Report Problem"
+              className="button"
+              style={{ width: '98px' }}
+              onClick={async () => {
+                const platform = (navigator as any).userAgentData?.platform ?? navigator.platform
+                const body = `Version: ${window.location.hostname}\nServer: ${lastConnectOptions.value?.server ?? '<not a server>'}\nPlatform: ${platform}\nWebsite: ${window.location.href}`
+                const currentHost = window.location.hostname
+                const options = [
+                  'GitHub (please use it if you can)',
+                  'Email',
+                  ...((currentHost === 'mcraft.fun' || currentHost === 'ru.mcraft.fun') ? ['Try Beta Version'] : []),
+                  // 'Use previous versions of client'
+                ]
+                const action = await showOptionsModal('Report client issue', options)
+                if (!action) return
+
+                switch (action) {
+                  case 'GitHub (please use it if you can)':
+                    openGithub(`/issues/new?body=${encodeURIComponent(body)}&title=${encodeURIComponent('[Bug Report] <describe your issue here>')}&labels=bug`)
+                    break
+                  case 'Email': {
+                    window.location.href = `mailto:support@mcraft.fun?body=${encodeURIComponent(body)}`
+                    break
+                  }
+                  case 'Try Beta Version': {
+                    if (currentHost === 'mcraft.fun') {
+                      window.location.href = 'https://s.mcraft.fun'
+                    }
+                    break
+                  }
+                  case 'Use previous versions of client':
+                    // TODO: Implement versions screen
+                    void showOptionsModal('Previous versions', [])
+                    break
+                }
+              }}
+            />
+          )}
+        </div>
+      )}
       {!lockConnect && <>
         <Button className="button" style={{ width: '204px' }} onClick={disconnect}>
           {fsState.inMemorySave && !fsState.syncFs && !fsState.isReadonly ? 'Save & Quit' : 'Disconnect & Reset'}
         </Button>
       </>}
-      {(noConnection || appConfig?.alwaysReconnectButton) && (
-        <Button className="button" style={{ width: '204px' }} onClick={reconnectReload}>
-          Reconnect
-        </Button>
-      )}
     </div>
     <LoadingTimer />
   </Screen>

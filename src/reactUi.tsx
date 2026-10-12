@@ -12,7 +12,9 @@ import SingleplayerProvider from './react/SingleplayerProvider'
 import CreateWorldProvider from './react/CreateWorldProvider'
 import AppStatusProvider from './react/AppStatusProvider'
 import SelectOption from './react/SelectOption'
-import EnterFullscreenButton from './react/EnterFullscreenButton'
+import SettingReloadModal from './react/SettingReloadModal'
+import AutoFillLoginModal from './react/AutoFillLoginModal'
+import MobilePortraitButtons from './react/MobilePortraitButtons'
 import ChatProvider from './react/ChatProvider'
 import TitleProvider from './react/TitleProvider'
 import ScoreboardProvider from './react/ScoreboardProvider'
@@ -45,6 +47,8 @@ import SignInMessageProvider from './react/SignInMessageProvider'
 import BookProvider from './react/BookProvider'
 import { options } from './optionsStorage'
 import BossBarOverlayProvider from './react/BossBarOverlayProvider'
+import VoiceChatConsentProvider from './react/VoiceChatConsentProvider'
+import VoiceChatMenuProvider from './react/VoiceChatMenuProvider'
 import ModsPage from './react/ModsPage'
 import DebugEdges from './react/DebugEdges'
 import GameInteractionOverlay from './react/GameInteractionOverlay'
@@ -66,6 +70,16 @@ import CreditsAboutModal from './react/CreditsAboutModal'
 import GlobalOverlayHints from './react/GlobalOverlayHints'
 import FullscreenTime from './react/FullscreenTime'
 import StorageConflictModal from './react/StorageConflictModal'
+import FireRenderer from './react/FireRenderer'
+import MonacoEditor from './react/MonacoEditor'
+import IframeModal from './react/IframeModal'
+import OverlayModelViewer from './react/OverlayModelViewer'
+import CornerIndicatorStats from './react/CornerIndicatorStats'
+import AllSettingsEditor from './react/AllSettingsEditor'
+import { isPlayground, urlParams } from './playgroundIntegration'
+import { withInjectableUi } from './react/extendableSystem'
+import { hadReactUiRegistered } from './clientMods'
+import { Inventory } from './react/inventory/Inventory'
 
 const isFirefox = ua.getBrowser().name === 'Firefox'
 if (isFirefox) {
@@ -137,7 +151,7 @@ const InGameComponent = ({ children }) => {
 let adapter: DrawerAdapterImpl
 
 const InGameUi = () => {
-  const { gameLoaded, showUI: showUIRaw } = useSnapshot(miscUiState)
+  const { gameLoaded, showUI: showUIRaw, disconnectedCleanup } = useSnapshot(miscUiState)
   const { disabledUiParts, displayBossBars, showMinimap } = useSnapshot(options)
   const modalsSnapshot = useSnapshot(activeModalStack)
   const hasModals = modalsSnapshot.length > 0
@@ -145,7 +159,9 @@ const InGameUi = () => {
   const displayFullmap = modalsSnapshot.some(modal => modal.reactType === 'full-map') || true
   // bot can't be used here
 
-  if (!gameLoaded || !bot || disabledUiParts.includes('*')) return
+  const gameWasLoaded = gameLoaded || disconnectedCleanup?.wasConnected
+
+  if (!gameWasLoaded || !bot || disabledUiParts.includes('*')) return
 
   if (!adapter) adapter = new DrawerAdapterImpl(bot.entity.position)
 
@@ -171,6 +187,7 @@ const InGameUi = () => {
           <VoiceMicrophone />
           <ChunksDebugScreen />
           <RendererDebugMenu />
+          {!disabledUiParts.includes('fire') && <FireRenderer />}
         </PerComponentErrorBoundary>
       </div>
 
@@ -192,6 +209,7 @@ const InGameUi = () => {
     <PerComponentErrorBoundary>
       <SignEditorProvider />
       <DisplayQr />
+      <Inventory />
     </PerComponentErrorBoundary>
     <RobustPortal to={document.body}>
       {displayFullmap && <MinimapProvider adapter={adapter} displayMode='fullmapOnly' />}
@@ -213,7 +231,7 @@ const WidgetDisplay = ({ name, Component }) => {
   return <Component />
 }
 
-const App = () => {
+const AppBase = () => {
   const scale = useAppScale()
   return (
     <UIProvider scale={scale}>
@@ -228,7 +246,7 @@ const App = () => {
             <ControDebug />
             <div />
           </RobustPortal>
-          <EnterFullscreenButton />
+          <MobilePortraitButtons />
           <StorageConflictModal />
           <InGameUi />
           <RobustPortal to={document.querySelector('#ui-root')}>
@@ -237,6 +255,8 @@ const App = () => {
             <CreateWorldProvider />
             <AppStatusProvider />
             <KeybindingsScreenProvider />
+            <VoiceChatConsentProvider />
+            <VoiceChatMenuProvider />
             <ServersListProvider />
             <OptionsRenderApp />
             <MainMenuRenderApp />
@@ -246,9 +266,11 @@ const App = () => {
             <PacketsReplayProvider />
             <NotificationProvider />
             <ModsPage />
-
             <SelectOption />
+            <SettingReloadModal />
+            <AutoFillLoginModal />
             <CreditsAboutModal />
+            <AllSettingsEditor />
             <NoModalFoundProvider />
           </RobustPortal>
           <RobustPortal to={document.body}>
@@ -257,7 +279,11 @@ const App = () => {
             </div>
             <div />
             <DebugEdges />
+            <OverlayModelViewer />
+            <MonacoEditor />
+            <IframeModal />
             <DebugResponseTimeIndicator />
+            <CornerIndicatorStats />
           </RobustPortal>
         </ButtonAppProvider>
       </div>
@@ -278,8 +304,16 @@ const PerComponentErrorBoundary = ({ children }) => {
   </ErrorBoundary>)
 }
 
-if (!new URLSearchParams(window.location.search).get('no-ui')) {
-  renderToDom(<App />, {
+const noUi = urlParams.get('no-ui') === 'true' || isPlayground
+
+if (!noUi) {
+  const App = withInjectableUi(AppBase, 'root')
+  const AppRender = () => {
+    const { state: hadReactUiRegisteredState } = useSnapshot(hadReactUiRegistered)
+
+    return <App key={hadReactUiRegisteredState ? '0' : '1'} />
+  }
+  renderToDom(<AppRender />, {
     strictMode: false,
     selector: '#react-root',
   })
