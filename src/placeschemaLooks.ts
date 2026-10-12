@@ -40,6 +40,7 @@ export const grantOf = (item: any): string | undefined => {
 }
 
 let pinnedOrigin: string | undefined
+let session = 0 // bumped by resetLooks, so a look still loading from the last server lands nowhere
 const models = new Map<string, THREE.Object3D>()
 const started = new Set<string>()
 
@@ -51,6 +52,7 @@ export const pinOrigin = (origin: string) => {
 }
 
 export const resetLooks = () => {
+  session++
   pinnedOrigin = undefined
   models.clear()
   started.clear()
@@ -103,8 +105,15 @@ export const externalUris = (bytes: ArrayBuffer): boolean => {
   try {
     const view = new DataView(bytes)
     if (view.getUint32(0, true) !== 0x46_54_6C_67) return true // 'glTF'
-    const length = view.getUint32(12, true)
-    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes, 20, length)))
+    // Every chunk, as three.js reads them: exactly one JSON chunk, or a later one could name what this check never saw.
+    const jsons: Uint8Array[] = []
+    for (let at = 12; at < bytes.byteLength;) {
+      const length = view.getUint32(at, true), type = view.getUint32(at + 4, true)
+      if (type === 0x4E_4F_53_4A) jsons.push(new Uint8Array(bytes, at + 8, length))
+      at += 8 + length
+    }
+    if (jsons.length !== 1) return true
+    const json = JSON.parse(new TextDecoder().decode(jsons[0]))
     return [...(json.buffers ?? []), ...(json.images ?? [])].some((x: any) => x?.uri !== undefined && !(typeof x.uri === 'string' && x.uri.startsWith('data:')))
   } catch { return true }
 }
@@ -136,6 +145,7 @@ export const onLook = async (grant: string, url: string, sha: string) => {
   }
   if (started.has(grant)) return
   started.add(grant)
+  const mine = session
   try {
     const r = await fetch(url, { redirect: 'error', credentials: 'omit' })
     if (!r.ok) throw new Error(`mesh answered ${r.status}`)
@@ -147,6 +157,7 @@ export const onLook = async (grant: string, url: string, sha: string) => {
     if (externalUris(bytes)) throw new Error('mesh names an external resource')
     const gltf = await new GLTFLoader().parseAsync(bytes, '')
     if (countVerts(gltf.scene) > MAX_VERTS) throw new Error('mesh too big')
+    if (mine !== session) return // the player moved on to another server meanwhile
     if (models.size >= MAX_MODELS) {
       const evicted = models.keys().next().value!
       models.delete(evicted)
@@ -156,7 +167,7 @@ export const onLook = async (grant: string, url: string, sha: string) => {
     console.debug('[placeschema] look loaded', grant)
     redrawHeld()
   } catch (e) {
-    started.delete(grant) // a later look message may retry
+    if (mine === session) started.delete(grant) // a later look message may retry
     console.warn('[placeschema]', grant, 'stays a stand-in:', String(e))
   }
 }

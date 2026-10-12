@@ -35,6 +35,12 @@ export const onAvatarSend = (fn: (choice: AvatarChoice) => void) => {
   fn(placeschemaMenu.avatar)
 }
 
+/** A new connection starts with nothing from the last server: no tier, account, items, skin, choice or sender. */
+export const resetPlaceSchemaMenu = () => {
+  Object.assign(placeschemaMenu, { tier: 'off', holder: '', items: [], skin: { url: '', model: 'classic' }, avatar: 'native' })
+  sendAvatar = undefined
+}
+
 export const setMenuTier = (t: string) => { placeschemaMenu.tier = t === 'full' || t === 'partial' ? t : 'off' }
 
 export const setAccount = (holder: string) => {

@@ -47,5 +47,10 @@ describe('PLACE-1157 review: a look names no external resource', () => {
     expect(externalUris(glb({ asset: { version: '2.0' }, images: [{ uri: 'textures/skin.png' }] }))).toBe(true)
     expect(externalUris(glb({ asset: { version: '2.0' }, images: [{ uri: 'data:image/png;base64,AA' }] }))).toBe(false) // inside the hash
     expect(externalUris(new ArrayBuffer(8))).toBe(true)
+    // a harmless first JSON chunk, then one naming an outside buffer: three.js would read the second
+    const first = glb({ asset: { version: '2.0' } }), second = glb({ asset: { version: '2.0' }, buffers: [{ byteLength: 4, uri: 'https://elsewhere.example/b.bin' }] })
+    const both = new Uint8Array(first.byteLength + second.byteLength - 12)
+    both.set(new Uint8Array(first)); both.set(new Uint8Array(second, 12), first.byteLength)
+    expect(externalUris(both.buffer)).toBe(true)
   })
 })

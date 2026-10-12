@@ -10,7 +10,7 @@ import { lastConnectOptions } from './appStatus'
 import { gameAdditionalState, miscUiState } from './globalState'
 import { placeschemaPortalTarget } from './placeschemaPortal'
 import { installLooks, MAX_BYTES, MAX_VERTS, onLook, pinOrigin, resetLooks } from './placeschemaLooks'
-import { onArrivedAvatar, onAvatarSend, onMenuOpenRequest, placeschemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
+import { onArrivedAvatar, onAvatarSend, onMenuOpenRequest, placeschemaMenu, resetPlaceSchemaMenu, setAccount, setMenuTier, setSkin } from './placeschemaMenu'
 import { applyNearbyPlayers, onVoiceAvailable, onVoiceConfig, setVoiceServerSender, disconnectVoice } from './voice/voiceChat'
 
 const isWebSocketServer = (server: string | undefined) => {
@@ -25,6 +25,9 @@ const getIsCustomChannelsEnabled = () => {
 
 export default () => {
   customEvents.on('mineflayerBotCreated', async () => {
+    // every connection, with or without custom channels: nothing PlaceSchema carries over from the last server
+    resetPlaceSchemaMenu()
+    resetLooks()
     if (!getIsCustomChannelsEnabled()) return
     bot.once('login', () => {
       registerConnectMetadataChannel()
